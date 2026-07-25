@@ -29,16 +29,69 @@ export const AuthProvider = ({ children }) => {
     };
   };
 
-  const register = async (name, email, password) => {
+  const checkEmail = async (email) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Check email failed');
+      }
+      return data; // { exists: boolean, message: string }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const register = async (name, email) => {
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name, email })
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
+      }
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const verifyOtp = async (email, otp) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'OTP Verification failed');
+      }
+      localStorage.setItem('user', JSON.stringify(data));
+      setUser(data);
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const googleLogin = async (token) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Google login failed');
       }
       localStorage.setItem('user', JSON.stringify(data));
       setUser(data);
@@ -57,6 +110,9 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await response.json();
       if (!response.ok) {
+        if (data.notVerified) {
+          return { notVerified: true, email };
+        }
         throw new Error(data.message || 'Login failed');
       }
       localStorage.setItem('user', JSON.stringify(data));
@@ -94,10 +150,13 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         loading,
+        checkEmail,
         register,
         login,
         logout,
         changePassword,
+        verifyOtp,
+        googleLogin,
         getAuthHeaders,
         API_URL
       }}

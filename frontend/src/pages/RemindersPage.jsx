@@ -11,6 +11,10 @@ export default function RemindersPage() {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [frequency, setFrequency] = useState('monthly');
+  const [dueMonth, setDueMonth] = useState('');
+  const [alarmTime, setAlarmTime] = useState('09:00');
+  
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState(false);
 
@@ -45,6 +49,11 @@ export default function RemindersPage() {
       return;
     }
 
+    if ((frequency === 'yearly' || frequency === 'one-time') && !dueMonth) {
+      setFormError('Please select a due month for yearly/one-time alarms');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/reminders`, {
         method: 'POST',
@@ -52,7 +61,10 @@ export default function RemindersPage() {
         body: JSON.stringify({
           title,
           amount: parseFloat(amount),
-          dueDate: dueDay
+          dueDate: dueDay,
+          frequency,
+          dueMonth: dueMonth ? parseInt(dueMonth) : undefined,
+          alarmTime
         })
       });
 
@@ -62,6 +74,10 @@ export default function RemindersPage() {
       setTitle('');
       setAmount('');
       setDueDate('');
+      setFrequency('monthly');
+      setDueMonth('');
+      setAlarmTime('09:00');
+      
       setFormSuccess(true);
       fetchReminders();
       setTimeout(() => setFormSuccess(false), 3000);
@@ -87,7 +103,7 @@ export default function RemindersPage() {
   };
 
   const handleDeleteReminder = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this reminder?')) return;
+    if (!window.confirm('Are you sure you want to remove this alarm?')) return;
 
     try {
       const response = await fetch(`${API_URL}/reminders/${id}`, {
@@ -96,7 +112,7 @@ export default function RemindersPage() {
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to delete reminder');
+        throw new Error(data.message || 'Failed to delete alarm');
       }
       fetchReminders();
     } catch (err) {
@@ -113,11 +129,10 @@ export default function RemindersPage() {
       {/* Left side: Add reminder form */}
       <div>
         <div className="glass-card">
-          <h3 style={{ marginBottom: '1.25rem' }}>Set Bill Alarm</h3>
+          <h3 style={{ marginBottom: '1.25rem' }}>Set Email Alarm</h3>
           
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-            Set a monthly recurring alert (alarm) for bills like credit cards, rent, or utilities. 
-            The system resets them to pending automatically at the start of each month.
+            Set a recurring or one-time email alarm for your bills. You will receive an email notification on the specific day and time.
           </p>
 
           {formError && (
@@ -160,11 +175,42 @@ export default function RemindersPage() {
             </div>
 
             <div className="form-group">
+              <label className="form-label">Frequency</label>
+              <select className="form-input" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly (Every 3 months)</option>
+                <option value="yearly">Yearly</option>
+                <option value="one-time">One-time</option>
+              </select>
+            </div>
+
+            {(frequency === 'yearly' || frequency === 'one-time' || frequency === 'quarterly') && (
+              <div className="form-group">
+                <label className="form-label">{frequency === 'quarterly' ? 'Starting Month' : 'Due Month'}</label>
+                <select className="form-input" value={dueMonth} onChange={(e) => setDueMonth(e.target.value)} required>
+                  <option value="">Select a month...</option>
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+            )}
+
+            <div className="form-group">
               <label className="form-label">Due Day of Month (1-31)</label>
               <input
                 type="number"
                 className="form-input"
-                placeholder="e.g. 15 (due on 15th every month)"
+                placeholder="e.g. 15"
                 min="1"
                 max="31"
                 value={dueDate}
@@ -173,8 +219,19 @@ export default function RemindersPage() {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem' }}>
-              Set Monthly Alarm
+            <div className="form-group">
+              <label className="form-label">Alarm Time</label>
+              <input
+                type="time"
+                className="form-input"
+                value={alarmTime}
+                onChange={(e) => setAlarmTime(e.target.value)}
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
+              Set Alarm
             </button>
           </form>
         </div>
@@ -183,7 +240,7 @@ export default function RemindersPage() {
       {/* Right side: List of reminders */}
       <div>
         <div className="glass-card">
-          <h3 style={{ marginBottom: '1.25rem' }}>Active Monthly Bill Alarms</h3>
+          <h3 style={{ marginBottom: '1.25rem' }}>Active Email Alarms</h3>
 
           {loading ? (
             <p>Loading active alarms...</p>
@@ -192,7 +249,7 @@ export default function RemindersPage() {
           ) : reminders.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">🔔</div>
-              <p>No monthly alarms set. Configure credit card bills, rent, etc. to get alarms!</p>
+              <p>No email alarms set. Configure credit card bills, rent, etc. to get alarms!</p>
             </div>
           ) : (
             <div className="reminder-grid">
@@ -204,18 +261,18 @@ export default function RemindersPage() {
                 if (rem.status === 'pending') {
                   if (daysLeft < 0) {
                     isCritical = true;
-                    dueMsg = `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) > 1 ? 's' : ''}!`;
+                    dueMsg = `Overdue by ${Math.abs(daysLeft)} day(s)!`;
                   } else if (daysLeft === 0) {
                     isCritical = true;
                     dueMsg = 'Due TODAY!';
                   } else if (daysLeft <= 5) {
                     isCritical = true;
-                    dueMsg = `Due in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`;
+                    dueMsg = `Due in ${daysLeft} day(s)`;
                   } else {
-                    dueMsg = `Due in ${daysLeft} days (on the ${rem.dueDate}th)`;
+                    dueMsg = `Due on the ${rem.dueDate}th`;
                   }
                 } else {
-                  dueMsg = 'Paid for this month';
+                  dueMsg = 'Paid';
                 }
 
                 return (
@@ -227,9 +284,16 @@ export default function RemindersPage() {
                     <h4 className="reminder-title">{rem.title}</h4>
                     <div className="reminder-amount">${rem.amount.toLocaleString()}</div>
                     
-                    <div className="reminder-due-date">
-                      <span>⏰</span> 
-                      <span className={isCritical ? 'critical' : ''}>{dueMsg}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.5rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                      <div className="reminder-due-date">
+                        <span>⏰</span> 
+                        <span className={isCritical ? 'critical' : ''}>{dueMsg}</span>
+                      </div>
+                      <div style={{ color: 'var(--text-secondary)' }}>
+                        <span style={{ textTransform: 'capitalize' }}>{rem.frequency}</span> 
+                        {rem.dueMonth && ` (Month: ${rem.dueMonth})`} 
+                        {' '}@ {rem.alarmTime}
+                      </div>
                     </div>
 
                     <div className="reminder-actions">

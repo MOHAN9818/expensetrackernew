@@ -40,3 +40,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Initialize alarm scheduler
+const initCron = require('./cron/alarmScheduler');
+initCron();

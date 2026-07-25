@@ -21,6 +21,23 @@ const ReminderSchema = new mongoose.Schema({
     min: [1, 'Day must be at least 1'],
     max: [31, 'Day must be at most 31']
   },
+  frequency: {
+    type: String,
+    enum: ['monthly', 'quarterly', 'yearly', 'one-time'],
+    default: 'monthly'
+  },
+  dueMonth: {
+    type: Number,
+    min: [1, 'Month must be at least 1'],
+    max: [12, 'Month must be at most 12']
+  },
+  alarmTime: {
+    type: String,
+    default: '09:00' // HH:MM 24-hour format
+  },
+  lastEmailSentAt: {
+    type: Date
+  },
   status: {
     type: String,
     enum: ['pending', 'paid'],

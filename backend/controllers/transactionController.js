@@ -1,9 +1,7 @@
 const Transaction = require('../models/Transaction');
 const { getStore } = require('../config/db');
 
-// @desc    Get user transactions
-// @route   GET /api/transactions
-// @access  Private
+
 const getTransactions = async (req, res) => {
   try {
     const store = getStore();

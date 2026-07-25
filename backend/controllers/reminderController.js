@@ -44,7 +44,7 @@ const getReminders = async (req, res) => {
 // @access  Private
 const addReminder = async (req, res) => {
   try {
-    const { title, amount, dueDate } = req.body;
+    const { title, amount, dueDate, frequency, dueMonth, alarmTime } = req.body;
 
     if (!title || !amount || !dueDate) {
       return res.status(400).json({ message: 'Please add all fields' });
@@ -56,7 +56,10 @@ const addReminder = async (req, res) => {
         userId: req.user.id,
         title,
         amount,
-        dueDate
+        dueDate,
+        frequency: frequency || 'monthly',
+        dueMonth,
+        alarmTime: alarmTime || '09:00'
       });
       return res.status(201).json(reminder);
     }
@@ -65,7 +68,10 @@ const addReminder = async (req, res) => {
       userId: req.user.id,
       title,
       amount,
-      dueDate
+      dueDate,
+      frequency: frequency || 'monthly',
+      dueMonth,
+      alarmTime: alarmTime || '09:00'
     });
 
     res.status(201).json(reminder);
