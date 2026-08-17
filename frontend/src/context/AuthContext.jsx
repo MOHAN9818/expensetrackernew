@@ -20,7 +20,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const API_URL = 'http://localhost:5000/api';
+  const API_URL = import.meta.env.MODE === 'production' 
+    ? 'https://expensetrackernew-edr6.onrender.com/api' 
+    : 'http://localhost:5000/api';
 
   const getAuthHeaders = () => {
     return {
@@ -40,7 +42,7 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         throw new Error(data.message || 'Check email failed');
       }
-      return data; // { exists: boolean, message: string }
+      return data;
     } catch (error) {
       throw error;
     }
@@ -63,12 +65,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const verifyOtp = async (email, otp) => {
+  const verifyOtp = async (email, otp, password) => {
     try {
       const response = await fetch(`${API_URL}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
+        body: JSON.stringify({ email, otp, password })
       });
       const data = await response.json();
       if (!response.ok) {
@@ -145,6 +147,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const forgotPassword = async (email) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Forgot password failed');
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email, otp, newPassword) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, newPassword })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Reset password failed');
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -157,6 +189,8 @@ export const AuthProvider = ({ children }) => {
         changePassword,
         verifyOtp,
         googleLogin,
+        forgotPassword,
+        resetPassword,
         getAuthHeaders,
         API_URL
       }}
