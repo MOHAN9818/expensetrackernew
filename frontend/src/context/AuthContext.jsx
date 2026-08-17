@@ -20,9 +20,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const API_URL = import.meta.env.MODE === 'production' 
-    ? 'https://expensetrackernew-edr6.onrender.com/api' 
-    : 'http://localhost:5000/api';
+  const API_URL = 'http://localhost:5000/api';
 
   const getAuthHeaders = () => {
     return {
