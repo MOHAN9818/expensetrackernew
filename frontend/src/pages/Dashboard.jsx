@@ -118,27 +118,52 @@ export default function Dashboard({ setCurrentPage }) {
 
   // Calculate expense categories percentages
   const expenseTransactions = transactions.filter(tx => tx.type === 'expense');
-  const categoriesMap = {};
+  const expenseCategoriesMap = {};
   expenseTransactions.forEach(tx => {
-    categoriesMap[tx.category] = (categoriesMap[tx.category] || 0) + tx.amount;
+    expenseCategoriesMap[tx.category] = (expenseCategoriesMap[tx.category] || 0) + tx.amount;
   });
 
-  const categoriesData = Object.keys(categoriesMap).map(cat => ({
+  const expenseCategoriesData = Object.keys(expenseCategoriesMap).map(cat => ({
     name: cat,
-    amount: categoriesMap[cat],
-    percentage: totalExpense > 0 ? Math.round((categoriesMap[cat] / totalExpense) * 100) : 0
+    amount: expenseCategoriesMap[cat],
+    percentage: totalExpense > 0 ? Math.round((expenseCategoriesMap[cat] / totalExpense) * 100) : 0
   })).sort((a, b) => b.amount - a.amount);
 
-  const expenseColors = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#a855f7', '#38bdf8', '#fb923c', '#22c55e', '#e879f9', '#94a3b8'];
+  const expenseColors = ['#6366f1', '#f59e0b', '#f43f5e', '#a855f7', '#38bdf8', '#fb923c', '#22c55e', '#e879f9', '#94a3b8'];
 
-  let chartAngle = 0;
-  const chartBackground = categoriesData.length === 0
+  let expenseChartAngle = 0;
+  const expenseChartBackground = expenseCategoriesData.length === 0
     ? 'conic-gradient(#334155 0deg 360deg)'
-    : categoriesData.map((cat, index) => {
+    : expenseCategoriesData.map((cat, index) => {
         const slice = totalExpense > 0 ? (cat.amount / totalExpense) * 360 : 0;
-        const start = chartAngle;
-        chartAngle += slice;
-        return `${expenseColors[index % expenseColors.length]} ${start.toFixed(1)}deg ${chartAngle.toFixed(1)}deg`;
+        const start = expenseChartAngle;
+        expenseChartAngle += slice;
+        return `${expenseColors[index % expenseColors.length]} ${start.toFixed(1)}deg ${expenseChartAngle.toFixed(1)}deg`;
+      }).join(', ');
+
+  // Calculate income categories percentages
+  const incomeTransactions = transactions.filter(tx => tx.type === 'income');
+  const incomeCategoriesMap = {};
+  incomeTransactions.forEach(tx => {
+    incomeCategoriesMap[tx.category] = (incomeCategoriesMap[tx.category] || 0) + tx.amount;
+  });
+
+  const incomeCategoriesData = Object.keys(incomeCategoriesMap).map(cat => ({
+    name: cat,
+    amount: incomeCategoriesMap[cat],
+    percentage: totalIncome > 0 ? Math.round((incomeCategoriesMap[cat] / totalIncome) * 100) : 0
+  })).sort((a, b) => b.amount - a.amount);
+
+  const incomeColors = ['#10b981', '#34d399', '#059669', '#6ee7b7', '#047857', '#a7f3d0'];
+
+  let incomeChartAngle = 0;
+  const incomeChartBackground = incomeCategoriesData.length === 0
+    ? 'conic-gradient(#334155 0deg 360deg)'
+    : incomeCategoriesData.map((cat, index) => {
+        const slice = totalIncome > 0 ? (cat.amount / totalIncome) * 360 : 0;
+        const start = incomeChartAngle;
+        incomeChartAngle += slice;
+        return `${incomeColors[index % incomeColors.length]} ${start.toFixed(1)}deg ${incomeChartAngle.toFixed(1)}deg`;
       }).join(', ');
 
   if (loading) {
@@ -231,17 +256,17 @@ export default function Dashboard({ setCurrentPage }) {
         {/* Left Side: Recent Transactions & Category Breakdown */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Quick Category Summary */}
+          {/* Quick Category Summary (Expenses) */}
           <div className="glass-card">
             <h3 style={{ marginBottom: '1.25rem' }}>Expense Breakdown</h3>
-            {categoriesData.length === 0 ? (
+            {expenseCategoriesData.length === 0 ? (
               <div className="empty-state">
                 <p>No expenses logged yet. Add some on the Transactions page!</p>
               </div>
             ) : (
               <div className="expense-visual-card">
                 <div className="expense-chart-shell">
-                  <div className="expense-pie-chart" style={{ background: `conic-gradient(${chartBackground})` }}>
+                  <div className="expense-pie-chart" style={{ background: `conic-gradient(${expenseChartBackground})` }}>
                     <div className="expense-pie-center">
                       <span>Total</span>
                       <strong>${totalExpense.toLocaleString()}</strong>
@@ -250,7 +275,7 @@ export default function Dashboard({ setCurrentPage }) {
                 </div>
 
                 <div className="expense-chart-legend">
-                  {categoriesData.map((cat, index) => (
+                  {expenseCategoriesData.map((cat, index) => (
                     <div key={cat.name} className="expense-legend-item">
                       <span className="expense-legend-swatch" style={{ background: expenseColors[index % expenseColors.length] }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -259,6 +284,42 @@ export default function Dashboard({ setCurrentPage }) {
                           <strong>${cat.amount.toLocaleString()}</strong>
                         </div>
                         <div className="expense-legend-bottom">{cat.percentage}% of expenses</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Category Summary (Income) */}
+          <div className="glass-card">
+            <h3 style={{ marginBottom: '1.25rem' }}>Income Breakdown</h3>
+            {incomeCategoriesData.length === 0 ? (
+              <div className="empty-state">
+                <p>No income logged yet. Add some on the Transactions page!</p>
+              </div>
+            ) : (
+              <div className="expense-visual-card">
+                <div className="expense-chart-shell">
+                  <div className="expense-pie-chart" style={{ background: `conic-gradient(${incomeChartBackground})` }}>
+                    <div className="expense-pie-center">
+                      <span>Total</span>
+                      <strong>${totalIncome.toLocaleString()}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="expense-chart-legend">
+                  {incomeCategoriesData.map((cat, index) => (
+                    <div key={cat.name} className="expense-legend-item">
+                      <span className="expense-legend-swatch" style={{ background: incomeColors[index % incomeColors.length] }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="expense-legend-top">
+                          <span>{cat.name}</span>
+                          <strong>${cat.amount.toLocaleString()}</strong>
+                        </div>
+                        <div className="expense-legend-bottom">{cat.percentage}% of income</div>
                       </div>
                     </div>
                   ))}
