@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/useAuth';
 
 export default function TransactionsPage() {
   const { getAuthHeaders, API_URL } = useAuth();
@@ -23,34 +23,24 @@ export default function TransactionsPage() {
   const incomeCategories = ['Salary', 'Freelance', 'Business', 'Investments', 'Bonus', 'Gifts', 'Other'];
   const expenseCategories = ['Food', 'Groceries', 'Shopping', 'Rent', 'Utilities', 'Transport', 'Travel', 'Entertainment', 'Medical', 'Education', 'Other'];
 
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/transactions`, {
-        headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch transactions');
-      setTransactions(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchTransactions = useCallback(async () => {
+    const response = await fetch(`${API_URL}/transactions`, {
+      headers: getAuthHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Failed to fetch transactions');
+    return data;
+  }, [API_URL, getAuthHeaders]);
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
-
-  // Update default category when transaction type changes
-  useEffect(() => {
-    if (type === 'income') {
-      setCategory('Salary');
-    } else {
-      setCategory('Food');
-    }
-  }, [type]);
+    fetchTransactions()
+      .then((data) => {
+        setTransactions(data);
+        setError('');
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [fetchTransactions]);
 
   const handleAddTransaction = async (e) => {
     e.preventDefault();
@@ -85,7 +75,9 @@ export default function TransactionsPage() {
       setFormSuccess(true);
 
       // Refresh list
-      fetchTransactions();
+      fetchTransactions()
+        .then(setTransactions)
+        .catch((err) => setError(err.message));
       setTimeout(() => setFormSuccess(false), 3000);
     } catch (err) {
       setFormError(err.message);
@@ -104,7 +96,9 @@ export default function TransactionsPage() {
       if (!response.ok) throw new Error(data.message || 'Failed to delete transaction');
       
       // Refresh list
-      fetchTransactions();
+      fetchTransactions()
+        .then(setTransactions)
+        .catch((err) => setError(err.message));
     } catch (err) {
       alert(err.message);
     }
@@ -145,14 +139,20 @@ export default function TransactionsPage() {
               <button
                 type="button"
                 className={`type-toggle-btn ${type === 'income' ? 'active income' : ''}`}
-                onClick={() => setType('income')}
+                onClick={() => {
+                  setType('income');
+                  setCategory('Salary');
+                }}
               >
                 Got (Income)
               </button>
               <button
                 type="button"
                 className={`type-toggle-btn ${type === 'expense' ? 'active expense' : ''}`}
-                onClick={() => setType('expense')}
+                onClick={() => {
+                  setType('expense');
+                  setCategory('Food');
+                }}
               >
                 Spent (Expense)
               </button>

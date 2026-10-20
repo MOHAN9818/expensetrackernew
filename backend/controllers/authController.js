@@ -5,7 +5,7 @@ const { getStore } = require('../config/db');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'dummy_client_id');
+const client = new OAuth2Client();
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 
 const sendEmail = async (to, subject, text) => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log(`Mock Email sent to ${to}: ${subject} - ${text}`);3
+    console.log(`Mock Email sent to ${to}: ${subject} - ${text}`);
     return;
   }
   try {
@@ -185,12 +185,29 @@ const loginUser = async (req, res) => {
 const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID || 'dummy_client_id'
-    });
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(503).json({ message: 'Google sign-in is not configured on the server' });
+    }
+    if (typeof token !== 'string' || !token) {
+      return res.status(400).json({ message: 'Google sign-in token is required' });
+    }
 
-    const { email, name, sub: googleId } = ticket.getPayload();
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      payload = ticket.getPayload();
+    } catch (error) {
+      console.error('Google token verification failed:', error);
+      return res.status(401).json({ message: 'Google sign-in token is invalid or expired' });
+    }
+
+    const { email, name, sub: googleId, email_verified: emailVerified } = payload || {};
+    if (!email || !name || !googleId || !emailVerified) {
+      return res.status(401).json({ message: 'Google account information could not be verified' });
+    }
 
     let user = await User.findOne({ email });
 
@@ -218,8 +235,8 @@ const googleLogin = async (req, res) => {
       token: generateToken(user._id)
     });
   } catch (error) {
-    console.error('Google Login Error:', error);
-    res.status(400).json({ message: 'Google authentication failed' });
+    console.error('Google login failed:', error);
+    res.status(500).json({ message: 'Google sign-in could not be completed' });
   }
 };
 

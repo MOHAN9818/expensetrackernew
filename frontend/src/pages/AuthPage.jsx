@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function AuthPage() {
@@ -162,8 +162,12 @@ export default function AuthPage() {
     resetMessages();
     setLoading(true);
     try {
+      if (!credentialResponse.credential) {
+        throw new Error('Google did not return an authentication token. Please try again.');
+      }
       await googleLogin(credentialResponse.credential);
     } catch (err) {
+      console.error('Google login backend error:', err);
       setError(err.message || 'Google login failed');
     } finally {
       setLoading(false);
@@ -466,8 +470,9 @@ export default function AuthPage() {
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
-                onError={() => {
-                  setError('Google Sign-In was unsuccessful. Try again later.');
+                onError={(err) => {
+                  console.error('Google Sign-In failed or popup closed:', err);
+                  setError('Google Sign-In was unsuccessful. Please check browser console and ensure http://localhost:5173 is added to Authorized JavaScript Origins in Google Cloud Console.');
                 }}
               />
             </div>

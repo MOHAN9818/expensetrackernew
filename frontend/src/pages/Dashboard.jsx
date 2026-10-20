@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/useAuth';
 
 export default function Dashboard({ setCurrentPage }) {
   const { getAuthHeaders, API_URL, changePassword } = useAuth();
@@ -12,37 +12,32 @@ export default function Dashboard({ setCurrentPage }) {
   const [passwordError, setPasswordError] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Fetch transactions
-      const txRes = await fetch(`${API_URL}/transactions`, {
-        headers: getAuthHeaders()
-      });
-      const txData = await txRes.json();
-      if (!txRes.ok) throw new Error(txData.message || 'Failed to fetch transactions');
+  const fetchData = useCallback(async () => {
+    const txRes = await fetch(`${API_URL}/transactions`, {
+      headers: getAuthHeaders()
+    });
+    const txData = await txRes.json();
+    if (!txRes.ok) throw new Error(txData.message || 'Failed to fetch transactions');
 
-      // Fetch reminders
-      const remRes = await fetch(`${API_URL}/reminders`, {
-        headers: getAuthHeaders()
-      });
-      const remData = await remRes.json();
-      if (!remRes.ok) throw new Error(remData.message || 'Failed to fetch reminders');
+    const remRes = await fetch(`${API_URL}/reminders`, {
+      headers: getAuthHeaders()
+    });
+    const remData = await remRes.json();
+    if (!remRes.ok) throw new Error(remData.message || 'Failed to fetch reminders');
 
-      setTransactions(txData);
-      setReminders(remData);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return { transactions: txData, reminders: remData };
+  }, [API_URL, getAuthHeaders]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData()
+      .then(({ transactions, reminders: data }) => {
+        setTransactions(transactions);
+        setReminders(data);
+        setError('');
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [fetchData]);
 
   const handlePayReminder = async (id) => {
     try {
@@ -55,7 +50,10 @@ export default function Dashboard({ setCurrentPage }) {
         throw new Error(data.message || 'Failed to pay reminder');
       }
       // Refresh data
-      fetchData();
+      const data = await fetchData();
+      setTransactions(data.transactions);
+      setReminders(data.reminders);
+      setError('');
     } catch (err) {
       alert(err.message);
     }
@@ -176,6 +174,12 @@ export default function Dashboard({ setCurrentPage }) {
 
   return (
     <div>
+      {error && (
+        <div className="form-error-message" role="alert" style={{ marginBottom: '1rem' }}>
+          {error}
+        </div>
+      )}
+
       {/* Alarm Message Section */}
       {activeAlarms.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import Navbar from './components/Navbar';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
@@ -7,16 +8,8 @@ import TransactionsPage from './pages/TransactionsPage';
 import RemindersPage from './pages/RemindersPage';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <h2>Loading FinControl...</h2>
-      </div>
-    );
-  }
 
   if (!user) {
     return <AuthPage />;

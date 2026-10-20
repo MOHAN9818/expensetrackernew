@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/useAuth';
 
 export default function RemindersPage() {
   const { getAuthHeaders, API_URL } = useAuth();
@@ -18,25 +18,24 @@ export default function RemindersPage() {
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState(false);
 
-  const fetchReminders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/reminders`, {
-        headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch reminders');
-      setReminders(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchReminders = useCallback(async () => {
+    const response = await fetch(`${API_URL}/reminders`, {
+      headers: getAuthHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Failed to fetch reminders');
+    return data;
+  }, [API_URL, getAuthHeaders]);
 
   useEffect(() => {
-    fetchReminders();
-  }, []);
+    fetchReminders()
+      .then((data) => {
+        setReminders(data);
+        setError('');
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [fetchReminders]);
 
   const handleAddReminder = async (e) => {
     e.preventDefault();
@@ -79,7 +78,9 @@ export default function RemindersPage() {
       setAlarmTime('09:00');
       
       setFormSuccess(true);
-      fetchReminders();
+      fetchReminders()
+        .then(setReminders)
+        .catch((err) => setError(err.message));
       setTimeout(() => setFormSuccess(false), 3000);
     } catch (err) {
       setFormError(err.message);
@@ -96,7 +97,9 @@ export default function RemindersPage() {
         const data = await response.json();
         throw new Error(data.message || 'Failed to update reminder status');
       }
-      fetchReminders();
+      fetchReminders()
+        .then(setReminders)
+        .catch((err) => setError(err.message));
     } catch (err) {
       alert(err.message);
     }
@@ -114,7 +117,9 @@ export default function RemindersPage() {
         const data = await response.json();
         throw new Error(data.message || 'Failed to delete alarm');
       }
-      fetchReminders();
+      fetchReminders()
+        .then(setReminders)
+        .catch((err) => setError(err.message));
     } catch (err) {
       alert(err.message);
     }
